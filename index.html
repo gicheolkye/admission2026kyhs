@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>광영고 3개년 대입 분석</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap');
+
+:root {
+  --bg: #0b0e14;
+  --bg2: #111520;
+  --card: rgba(255,255,255,0.05);
+  --border: rgba(255,255,255,0.10);
+  --text: #f1efe8;
+  --muted: #aab1c0;
+  --muted2: #838ba0;
+  --green: #34d399;
+  --blue: #60a5fa;
+  --amber: #fbbf24;
+  --red: #f87171;
+  --purple: #a78bfa;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%; height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Noto Sans KR', sans-serif;
+  font-size: 16px;
+  overflow: hidden;
+}
+
+/* ── Slide system ── */
+.slide {
+  position: absolute; inset: 0;
+  display: none; flex-direction: column;
+  padding: 32px 48px 68px;
+  opacity: 0;
+  transition: opacity .35s ease;
+  overflow-y: auto;
+}
+.slide.active { display: flex; opacity: 1; }
+
+/* ── Nav ── */
+#nav {
+  position: fixed; bottom: 16px; left: 50%;
+  transform: translateX(-50%);
+  display: flex; align-items: center; gap: 14px;
+  z-index: 200;
+  background: rgba(11,14,20,.92);
+  border: 1px solid var(--border);
+  border-radius: 44px;
+  padding: 10px 24px;
+  backdrop-filter: blur(12px);
+}
+.nb {
+  background: none; border: none;
+  color: var(--text); width: 40px; height: 40px;
+  border-radius: 50%; font-size: 18px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .2s;
+}
+.nb:hover { background: rgba(255,255,255,.14); }
+.nb:disabled { opacity: .25; cursor: default; }
+#sc { font-size: 15px; font-weight:500; color: var(--muted); min-width: 56px; text-align: center; }
+.dots { display: flex; gap: 6px; align-items: center; }
+.dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: rgba(255,255,255,.22); cursor: pointer;
+  transition: all .2s;
+}
+.dot.on { background: var(--green); width: 22px; border-radius: 4px; }
+
+/* ── Slide header ── */
+.s-label {
+  font-size: 14px; font-weight: 700;
+  letter-spacing: .14em; text-transform: uppercase;
+  color: var(--green); margin-bottom: 8px;
+}
+.s-title {
+  font-size: 40px; font-weight: 900;
+  color: #ffffff; line-height: 1.25;
+  margin-bottom: 24px;
+}
+
+/* ── Metric grid ── */
+.mgrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px; margin-bottom: 22px;
+}
+.mc {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px; padding: 20px 18px;
+  position: relative; overflow: hidden;
+}
+.mc::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: var(--accent, var(--green));
+}
+.mc-label { font-size: 14.5px; color: var(--muted); margin-bottom: 8px; font-weight: 600; }
+.mc-val {
+  font-size: 50px; font-weight: 900; line-height: 1;
+  margin-bottom: 8px; color: var(--accent, #ffffff);
+}
+.mc-sub { font-size: 14.5px; color: #c9cddb; line-height: 1.75; }
+
+/* ── Chart card ── */
+.cc {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px; padding: 20px 24px;
+  display: flex; flex-direction: column;
+  overflow: auto;
+}
+.cc-title {
+  font-size: 14px; font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 14px;
+}
+.cfill { position: relative; flex: 1; min-height: 220px; }
+
+/* ── Table card ── */
+.tc {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px; padding: 20px 24px;
+  overflow: auto;
+}
+table { width: 100%; border-collapse: collapse; }
+thead th {
+  font-size: 14px; font-weight: 700; color: var(--muted);
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255,255,255,.12);
+  text-align: left; text-transform: uppercase; letter-spacing: .05em;
+  white-space: nowrap;
+}
+tbody td {
+  font-size: 16.5px; color: var(--text);
+  padding: 13px 16px;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: rgba(255,255,255,.04); }
+.tag {
+  display: inline-block; font-size: 13.5px; font-weight: 700;
+  padding: 3px 10px; border-radius: 5px;
+}
+.tag-sky { background: rgba(96,165,250,.18); color: var(--blue); }
+.tag-g { background: rgba(52,211,153,.18); color: var(--green); }
+
+/* ── Legend ── */
+.leg { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
+.li { display: flex; align-items: center; gap: 7px; font-size: 14.5px; color: var(--muted); font-weight:500; }
+.ld { width: 11px; height: 11px; border-radius: 3px; flex-shrink: 0; }
+
+/* ── Note ── */
+.note { font-size: 14px; color: var(--muted2); line-height: 1.7; margin-top: 8px; }
+
+/* ── Year badge ── */
+.yr-badge {
+  display: inline-block;
+  font-size: 13px; font-weight: 700;
+  padding: 3px 10px; border-radius: 5px;
+  margin-right: 6px;
+}
+.yr-2024 { background: rgba(180,178,169,.18); color: #cfccc2; }
+.yr-2025 { background: rgba(96,165,250,.18); color: var(--blue); }
+.yr-2026 { background: rgba(52,211,153,.18); color: var(--green); }
+
+@media (max-width: 1100px) {
+  .mgrid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 900px) {
+  .mgrid { grid-template-columns: repeat(2, 1fr); }
+  .s-title { font-size: 30px; }
+  .mc-val { font-size: 40px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ① 핵심 지표 -->
+<div class="slide" id="s1">
+  <div class="s-label">광영고등학교 · 2026학년도 대입 결과</div>
+  <div class="s-title">합격 현황 한눈에 보기</div>
+  <div class="mgrid">
+    <div class="mc" style="--accent:var(--text)">
+      <div class="mc-label">전체 합격 건수</div>
+      <div class="mc-val">369</div>
+      <div class="mc-sub">학생부 335건<br>논술 12건 · 기타 22건</div>
+    </div>
+    <div class="mc" style="--accent:var(--blue)">
+      <div class="mc-label">SKY 합격</div>
+      <div class="mc-val" style="color:var(--blue)">10</div>
+      <div class="mc-sub">서울대 1<br>연세대 5 · 고려대 4</div>
+    </div>
+    <div class="mc" style="--accent:var(--red)">
+      <div class="mc-label">의·치·한·약 합격</div>
+      <div class="mc-val" style="color:var(--red)">1</div>
+      <div class="mc-sub">서울대 약학계열 1건<br>3개년 누적 5건 (지원 28건)</div>
+    </div>
+    <div class="mc" style="--accent:var(--amber)">
+      <div class="mc-label">논술 합격</div>
+      <div class="mc-val" style="color:var(--amber)">12</div>
+      <div class="mc-sub">4년제 논술위주<br>내신 3.64~6.76등급</div>
+    </div>
+    <div class="mc" style="--accent:var(--green)">
+      <div class="mc-label">서울 소재 합격</div>
+      <div class="mc-val" style="color:var(--green)">76</div>
+      <div class="mc-sub">합격·충원합격 기준<br>전체의 21%</div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;flex:1;">
+    <div class="cc">
+      <div class="cc-title">전형별 합격 분포 (2026)</div>
+      <div class="leg">
+        <div class="li"><div class="ld" style="background:#60a5fa"></div>학생부 335건</div>
+        <div class="li"><div class="ld" style="background:#fbbf24"></div>논술 12건</div>
+        <div class="li"><div class="ld" style="background:#a78bfa"></div>기타 22건</div>
+      </div>
+      <div class="cfill"><canvas id="c1"></canvas></div>
+    </div>
+    <div class="cc">
+      <div class="cc-title">3개년 전체 합격 추이</div>
+      <div class="leg">
+        <div class="li"><div class="ld" style="background:#9096a5"></div>2024학년도</div>
+        <div class="li"><div class="ld" style="background:#60a5fa"></div>2025학년도</div>
+        <div class="li"><div class="ld" style="background:#34d399"></div>2026학년도</div>
+      </div>
+      <div class="cfill"><canvas id="c2"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ② SKY 합격 -->
+<div class="slide" id="s2">
+  <div class="s-label">상위권 합격 현황</div>
+  <div class="s-title">SKY 합격 상세 · 3개년 비교</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;flex:1;">
+    <div class="tc">
+      <div class="cc-title" style="margin-bottom:14px">2026학년도 SKY 합격 현황</div>
+      <table>
+        <thead><tr><th>대학</th><th>전형</th><th>학과</th><th>결과</th></tr></thead>
+        <tbody>
+          <tr><td><span class="tag tag-sky">서울대</span></td><td>학생부종합</td><td>약학계열</td><td>합격 1</td></tr>
+          <tr><td><span class="tag tag-sky">연세대</span></td><td>학생부교과·종합</td><td>반도체·컴퓨팅 외</td><td>합격/충원 5</td></tr>
+          <tr><td><span class="tag tag-sky">고려대</span></td><td>학생부교과·종합</td><td>데이터과학·컴퓨터 외</td><td>합격/충원 4</td></tr>
+        </tbody>
+      </table>
+      <div style="height:22px"></div>
+      <div class="cc-title" style="margin-bottom:14px">3개년 SKY 합격 추이</div>
+      <table>
+        <thead><tr><th>학년도</th><th>서울대</th><th>연세대</th><th>고려대</th><th>합계</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="yr-badge yr-2024">2024</span></td>
+            <td>1</td><td>4</td><td>3</td><td><strong>8</strong></td>
+          </tr>
+          <tr>
+            <td><span class="yr-badge yr-2025">2025</span></td>
+            <td>2</td><td>5</td><td>3</td><td><strong>10</strong></td>
+          </tr>
+          <tr>
+            <td><span class="yr-badge yr-2026">2026</span></td>
+            <td>1</td><td>5</td><td>4</td><td><strong>10</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="cc">
+      <div class="cc-title">SKY 합격 3개년 비교 차트</div>
+      <div class="cfill"><canvas id="c3"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ③ 의·치·한·약 합격 -->
+<div class="slide" id="s3">
+  <div class="s-label">최상위 의약학 계열 지원 현황</div>
+  <div class="s-title">의예·치의예·한의예·약학 지원 및 합격 현황</div>
+  <div class="mgrid" style="grid-template-columns:repeat(4,1fr); margin-bottom:18px;">
+    <div class="mc" style="--accent:var(--red)">
+      <div class="mc-label">3개년 총 지원</div>
+      <div class="mc-val" style="font-size:44px;color:var(--red)">28</div>
+      <div class="mc-sub">의학 13 · 약학 8<br>한의학 5 · 치의학 2</div>
+    </div>
+    <div class="mc" style="--accent:var(--green)">
+      <div class="mc-label">3개년 총 합격</div>
+      <div class="mc-val" style="font-size:44px;color:var(--green)">5</div>
+      <div class="mc-sub">합격률 17.9%<br>합격+충원합격 기준</div>
+    </div>
+    <div class="mc" style="--accent:var(--blue)">
+      <div class="mc-label">약학 합격</div>
+      <div class="mc-val" style="font-size:44px;color:var(--blue)">2</div>
+      <div class="mc-sub">경희대(2024) · 서울대(2026)<br>내신 1.09 / 1.16등급</div>
+    </div>
+    <div class="mc" style="--accent:var(--amber)">
+      <div class="mc-label">의예과 합격</div>
+      <div class="mc-val" style="font-size:44px;color:var(--amber)">2</div>
+      <div class="mc-sub">충남대·인하대(2025)<br>모두 충원합격 · 내신 1.17등급</div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1.2fr;gap:18px;flex:1;min-height:0;">
+    <div style="display:flex;flex-direction:column;gap:18px;min-height:0;">
+      <div class="cc" style="flex:1;">
+        <div class="cc-title">계열별 지원 분포 (3개년, 28건)</div>
+        <div class="cfill"><canvas id="c9"></canvas></div>
+      </div>
+      <div class="cc" style="flex:1;">
+        <div class="cc-title">연도별 지원 · 합격 추이</div>
+        <div class="cfill"><canvas id="c10"></canvas></div>
+      </div>
+    </div>
+    <div class="tc">
+      <div class="cc-title" style="margin-bottom:14px">전체 지원 내역 (3개년 · 28건)</div>
+      <table>
+        <thead><tr><th>학년도</th><th>대학</th><th>학과</th><th>계열</th><th>결과</th><th>전교과</th></tr></thead>
+        <tbody>
+          <tr><td><span class="yr-badge yr-2024">2024</span></td><td>서울대(서울)</td><td>약학계열</td><td>약학</td><td>불합격</td><td>1.09</td></tr>
+          <tr><td><span class="yr-badge yr-2024">2024</span></td><td>경희대(서울)</td><td>약학과(6년제)</td><td>약학</td><td><span class="tag tag-g">합격</span></td><td>1.09</td></tr>
+          <tr><td><span class="yr-badge yr-2024">2024</span></td><td>연세대(서울)</td><td>치의예과</td><td>치의학</td><td>불합격</td><td>1.09</td></tr>
+          <tr><td><span class="yr-badge yr-2024">2024</span></td><td>중앙대(서울)</td><td>약학부</td><td>약학</td><td>불합격</td><td>1.09</td></tr>
+          <tr><td><span class="yr-badge yr-2024">2024</span></td><td>경희대(서울)</td><td>한의예과(인문)</td><td>한의학</td><td><span class="tag tag-g">합격</span></td><td>1.27</td></tr>
+          <tr><td><span class="yr-badge yr-2024">2024</span></td><td>대구한의대(경산)</td><td>한의예과(자연)</td><td>한의학</td><td>불합격</td><td>1.87</td></tr>
+          <tr><td><span class="yr-badge yr-2024">2024</span></td><td>동국대(WISE)</td><td>한의예과</td><td>한의학</td><td>불합격</td><td>1.87</td></tr>
+          <tr><td><span class="yr-badge yr-2025">2025</span></td><td>경희대(서울)</td><td>한의예과(인문)</td><td>한의학</td><td>불합격</td><td>1.15</td></tr>
+          <tr><td><span class="yr-badge yr-2025">2025</span></td><td>한양대(서울)</td><td>의예과</td><td>의학</td><td>불합격</td><td>1.17</td></tr>
+          <tr><td><span class="yr-badge yr-2025">2025</span></td><td>서울대(서울)</td><td>치의학대학원</td><td>치의학</td><td>불합격</td><td>1.17</td></tr>
+          <tr><td><span class="yr-badge yr-2025">2025</span></td><td>충남대(대전)</td><td>의예과</td><td>의학</td><td><span class="tag tag-g">충원합격</span></td><td>1.17</td></tr>
+          <tr><td><span class="yr-badge yr-2025">2025</span></td><td>가톨릭대(성의)</td><td>의예과</td><td>의학</td><td>불합격</td><td>1.17</td></tr>
+          <tr><td><span class="yr-badge yr-2025">2025</span></td><td>인하대(인천)</td><td>의예과</td><td>의학</td><td><span class="tag tag-g">충원합격</span></td><td>1.17</td></tr>
+          <tr><td><span class="yr-badge yr-2025">2025</span></td><td>울산대(울산)</td><td>의예과</td><td>의학</td><td>불합격</td><td>1.17</td></tr>
+          <tr><td><span class="yr-badge yr-2025">2025</span></td><td>단국대(천안)</td><td>의예과</td><td>의학</td><td>불합격</td><td>1.30</td></tr>
+          <tr><td><span class="yr-badge yr-2025">2025</span></td><td>한림대(춘천)</td><td>의학과</td><td>의학</td><td>불합격</td><td>1.30</td></tr>
+          <tr><td><span class="yr-badge yr-2025">2025</span></td><td>연세대(서울)</td><td>의예과</td><td>의학</td><td>불합격</td><td>1.32</td></tr>
+          <tr><td><span class="yr-badge yr-2025">2025</span></td><td>원광대(익산)</td><td>의예과</td><td>의학</td><td>불합격</td><td>1.32</td></tr>
+          <tr><td><span class="yr-badge yr-2025">2025</span></td><td>인하대(인천)</td><td>의예과</td><td>의학</td><td>불합격</td><td>1.32</td></tr>
+          <tr><td><span class="yr-badge yr-2025">2025</span></td><td>중앙대(서울)</td><td>의학부(의예)</td><td>의학</td><td>불합격</td><td>1.32</td></tr>
+          <tr><td><span class="yr-badge yr-2025">2025</span></td><td>단국대(천안)</td><td>의예과</td><td>의학</td><td>불합격</td><td>1.32</td></tr>
+          <tr><td><span class="yr-badge yr-2025">2025</span></td><td>경상국립대(칠암)</td><td>의예과</td><td>의학</td><td>불합격</td><td>1.32</td></tr>
+          <tr><td><span class="yr-badge yr-2025">2025</span></td><td>세명대(제천)</td><td>한의예과</td><td>한의학</td><td>불합격</td><td>1.70</td></tr>
+          <tr><td><span class="yr-badge yr-2026">2026</span></td><td>서울대(서울)</td><td>약학계열</td><td>약학</td><td><span class="tag tag-g">합격</span></td><td>1.16</td></tr>
+          <tr><td><span class="yr-badge yr-2026">2026</span></td><td>경희대(서울)</td><td>약학과(6년제)</td><td>약학</td><td>불합격</td><td>1.16</td></tr>
+          <tr><td><span class="yr-badge yr-2026">2026</span></td><td>연세대(서울)</td><td>약학과</td><td>약학</td><td>불합격</td><td>1.16</td></tr>
+          <tr><td><span class="yr-badge yr-2026">2026</span></td><td>중앙대(서울)</td><td>약학부</td><td>약학</td><td>불합격</td><td>1.16</td></tr>
+          <tr><td><span class="yr-badge yr-2026">2026</span></td><td>동국대(고양)</td><td>약학과</td><td>약학</td><td>불합격</td><td>1.16</td></tr>
+        </tbody>
+      </table>
+      <div class="note" style="margin-top:12px">※ 지원자 전교과 평균 등급 1.09~1.87 · 최상위 내신에서도 의예과 최초합격은 없었고 충원합격 2건만 발생 · 2026학년도는 약학 5건만 지원, 서울대만 합격</div>
+    </div>
+  </div>
+</div>
+
+<!-- ④ 대학별 합격 TOP15 -->
+<div class="slide" id="s4">
+  <div class="s-label">합격 대학 분포</div>
+  <div class="s-title">2026학년도 합격 대학 TOP 15 (4년제)</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;flex:1;">
+    <div class="cc">
+      <div class="cc-title">합격 건수 상위 대학</div>
+      <div class="note" style="margin-bottom:12px">4년제 기준 · 전형 통합 · 합격+충원합격</div>
+      <div class="cfill"><canvas id="c4"></canvas></div>
+    </div>
+    <div class="tc">
+      <div class="cc-title" style="margin-bottom:14px">상위 합격 대학 목록</div>
+      <table>
+        <thead><tr><th>대학명</th><th>합격건수</th><th>주요 전형</th></tr></thead>
+        <tbody>
+          <tr><td>안양대학교(안양)</td><td><strong>10</strong></td><td>학생부교과</td></tr>
+          <tr><td>백석대학교(천안)</td><td><strong>8</strong></td><td>학생부교과</td></tr>
+          <tr><td>국민대학교(서울)</td><td><strong>6</strong></td><td>학생부종합</td></tr>
+          <tr><td>강원대학교(춘천)</td><td><strong>6</strong></td><td>학생부교과</td></tr>
+          <tr><td>연세대학교(서울)</td><td><strong>5</strong></td><td>학생부교과</td></tr>
+          <tr><td>중앙대학교(서울)</td><td><strong>5</strong></td><td>학생부종합</td></tr>
+          <tr><td>서강대학교(서울)</td><td><strong>5</strong></td><td>학생부종합</td></tr>
+          <tr><td>서울과학기술대학교(서울)</td><td><strong>5</strong></td><td>학생부종합</td></tr>
+          <tr><td>인하대학교(인천)</td><td><strong>5</strong></td><td>학생부종합</td></tr>
+          <tr><td>세종대학교(서울)</td><td><strong>5</strong></td><td>학생부종합</td></tr>
+          <tr><td>가천대학교(성남)</td><td><strong>5</strong></td><td>학생부교과</td></tr>
+          <tr><td>경기대학교(수원)</td><td><strong>5</strong></td><td>학생부교과</td></tr>
+          <tr><td>성결대학교(안양)</td><td><strong>5</strong></td><td>학생부교과</td></tr>
+          <tr><td>선문대학교(아산)</td><td><strong>5</strong></td><td>학생부교과</td></tr>
+          <tr><td>고려대학교(서울)</td><td><strong>4</strong></td><td>학생부교과·종합</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ⑤ 논술 합격 분석 -->
+<div class="slide" id="s5">
+  <div class="s-label">논술 전형 분석</div>
+  <div class="s-title">논술 합격자 내신 등급 분포</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;flex:1;">
+    <div class="cc">
+      <div class="cc-title">논술 합격자 내신 분포 (12건)</div>
+      <div class="note" style="margin-bottom:12px">전교과 평균 등급 기준 · 내신 불문 논술 실력으로 합격</div>
+      <div class="cfill"><canvas id="c5"></canvas></div>
+    </div>
+    <div class="tc">
+      <div class="cc-title" style="margin-bottom:14px">논술 합격 상세 내역</div>
+      <table>
+        <thead><tr><th>대학</th><th>학과</th><th>결과</th><th>내신</th></tr></thead>
+        <tbody>
+          <tr><td>아주대(수원)</td><td>수학과</td><td><span class="tag tag-g">합격</span></td><td>3.64</td></tr>
+          <tr><td>을지대(성남)</td><td>첨단학부</td><td><span class="tag tag-g">합격</span></td><td>3.96</td></tr>
+          <tr><td>수원대(수원)</td><td>AI데이터과학부</td><td><span class="tag tag-g">합격</span></td><td>4.22</td></tr>
+          <tr><td>서경대(서울)</td><td>미래융합학부</td><td><span class="tag tag-g">합격</span></td><td>4.22</td></tr>
+          <tr><td>신한대(의정부)</td><td>방사선학과</td><td><span class="tag tag-g">합격</span></td><td>4.27</td></tr>
+          <tr><td>가천대(성남)</td><td>반도체대학</td><td><span class="tag tag-g">합격</span></td><td>4.28</td></tr>
+          <tr><td>서경대(서울)</td><td>미래융합학부</td><td><span class="tag tag-g">합격</span></td><td>4.28</td></tr>
+          <tr><td>수원대(수원)</td><td>건설환경에너지공학부</td><td><span class="tag tag-g">충원</span></td><td>4.94</td></tr>
+          <tr><td>을지대(성남)</td><td>인문사회계열학부</td><td><span class="tag tag-g">합격</span></td><td>4.94</td></tr>
+          <tr><td>경기대(수원)</td><td>자유전공학부(수리)</td><td><span class="tag tag-g">합격</span></td><td>5.11</td></tr>
+          <tr><td>수원대(수원)</td><td>건설환경에너지공학부</td><td><span class="tag tag-g">합격</span></td><td>5.36</td></tr>
+          <tr><td>한신대(오산)</td><td>빅데이터융합학</td><td><span class="tag tag-g">합격</span></td><td>6.76</td></tr>
+        </tbody>
+      </table>
+      <div class="note" style="margin-top:12px">※ 내신 평균 4.66등급 · 최저 3.64 ~ 최고 6.76 · 내신 6~7등급대도 논술로 합격</div>
+    </div>
+  </div>
+</div>
+
+<!-- ⑥ 학생부 내신 분포 -->
+<div class="slide" id="s6">
+  <div class="s-label">학생부 전형 분석</div>
+  <div class="s-title">학생부 합격자 내신 등급 분포</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;flex:1;">
+    <div class="cc">
+      <div class="cc-title">내신 등급별 합격 건수 (학생부, 2026)</div>
+      <div class="note" style="margin-bottom:12px">전교과 평균 등급 기준 · 총 335건</div>
+      <div class="cfill"><canvas id="c6"></canvas></div>
+    </div>
+    <div class="cc">
+      <div class="cc-title">전형 유형 세부 (2026 학생부 합격)</div>
+      <div class="cfill"><canvas id="c7"></canvas></div>
+      <div class="note" style="margin-top:10px">
+        전교과 평균 : 4.45등급 (최고 1.12 ~ 최저 7.80)<br>
+        교과전형 165건 · 종합전형 72건 · 전문대(2·3년제) 98건
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ⑦ 3개년 합격 추이 -->
+<div class="slide" id="s7">
+  <div class="s-label">3개년 종합 분석</div>
+  <div class="s-title">2024 · 2025 · 2026 합격 현황 비교</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;flex:1;">
+    <div class="cc">
+      <div class="cc-title">전형별 합격 3개년 비교</div>
+      <div class="leg">
+        <div class="li"><div class="ld" style="background:#9096a5"></div>2024</div>
+        <div class="li"><div class="ld" style="background:#60a5fa"></div>2025</div>
+        <div class="li"><div class="ld" style="background:#34d399"></div>2026</div>
+      </div>
+      <div class="cfill"><canvas id="c8"></canvas></div>
+    </div>
+    <div class="tc">
+      <div class="cc-title" style="margin-bottom:16px">3개년 핵심 지표 비교</div>
+      <table>
+        <thead><tr><th>지표</th><th><span class="yr-badge yr-2024">2024</span></th><th><span class="yr-badge yr-2025">2025</span></th><th><span class="yr-badge yr-2026">2026</span></th></tr></thead>
+        <tbody>
+          <tr><td>전체 합격</td><td>327건</td><td>495건</td><td><strong>369건</strong></td></tr>
+          <tr><td>SKY 합격</td><td>8명</td><td>10명</td><td><strong>10명</strong></td></tr>
+          <tr><td>학생부 합격</td><td>302건</td><td>465건</td><td><strong>335건</strong></td></tr>
+          <tr><td>논술 합격</td><td>8건</td><td>11건</td><td><strong>12건</strong></td></tr>
+          <tr><td>기타(면접·실기·서류)</td><td>17건</td><td>19건</td><td><strong>22건</strong></td></tr>
+          <tr><td>서울 소재 합격</td><td>56건</td><td>90건</td><td><strong>76건</strong></td></tr>
+          <tr><td>연세대 합격</td><td>4명</td><td>5명</td><td><strong>5명</strong></td></tr>
+          <tr><td>고려대 합격</td><td>3명</td><td>3명</td><td><strong>4명</strong></td></tr>
+        </tbody>
+      </table>
+      <div class="note" style="margin-top:14px">※ 합격·충원합격 합산 기준 | 광영고 3개년 입결 원자료(총 4,164건) 분석</div>
+    </div>
+  </div>
+</div>
+
+<!-- NAV -->
+<div id="nav">
+  <button class="nb" id="prev" onclick="go(-1)">◀</button>
+  <div class="dots" id="dots"></div>
+  <span id="sc">1 / 6</span>
+  <button class="nb" id="next" onclick="go(1)">▶</button>
+</div>
+
+<script>
+/* ── Navigation ── */
+const TOTAL = 7;
+let cur = 1;
+
+function goTo(n) {
+  if (n < 1 || n > TOTAL) return;
+  document.querySelectorAll('.slide').forEach(s => s.classList.remove('active'));
+  document.getElementById('s' + n).classList.add('active');
+  document.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('on', i === n - 1));
+  document.getElementById('sc').textContent = n + ' / ' + TOTAL;
+  document.getElementById('prev').disabled = n === 1;
+  document.getElementById('next').disabled = n === TOTAL;
+  cur = n;
+}
+
+function go(d) { goTo(cur + d); }
+
+// Build dots
+const dotsEl = document.getElementById('dots');
+for (let i = 1; i <= TOTAL; i++) {
+  const span = document.createElement('span');
+  span.className = 'dot';
+  span.onclick = () => goTo(i);
+  dotsEl.appendChild(span);
+}
+
+// Keyboard
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight') go(1);
+  if (e.key === 'ArrowLeft') go(-1);
+});
+
+/* ── Chart defaults ── */
+Chart.defaults.color = '#aab1c0';
+Chart.defaults.font.family = 'Noto Sans KR';
+Chart.defaults.font.size = 14;
+
+const C = {
+  green: '#34d399', blue: '#60a5fa', amber: '#fbbf24',
+  red: '#f87171', purple: '#a78bfa', gray: '#9096a5',
+  greenDim: 'rgba(52,211,153,.22)', blueDim: 'rgba(96,165,250,.22)',
+};
+
+/* ── Slide 1: Donut ── */
+new Chart(document.getElementById('c1'), {
+  type: 'doughnut',
+  data: {
+    labels: ['학생부 335', '논술 12', '기타 22'],
+    datasets: [{
+      data: [335, 12, 22],
+      backgroundColor: [C.blue, C.amber, C.purple],
+      borderWidth: 0,
+      hoverOffset: 8,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    cutout: '65%',
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#111520',
+        borderColor: 'rgba(255,255,255,.15)',
+        borderWidth: 1,
+        titleFont: { size: 15, weight: '700' },
+        bodyFont: { size: 14 },
+        padding: 10,
+        callbacks: {
+          label: ctx => ' ' + ctx.label + '건'
+        }
+      }
+    }
+  }
+});
+
+/* ── Slide 1: Grouped bar 3개년 ── */
+new Chart(document.getElementById('c2'), {
+  type: 'bar',
+  data: {
+    labels: ['학생부', '논술', '기타'],
+    datasets: [
+      { label: '2024', data: [302, 8, 17], backgroundColor: C.gray, borderRadius: 4 },
+      { label: '2025', data: [465, 11, 19], backgroundColor: C.blue, borderRadius: 4 },
+      { label: '2026', data: [335, 12, 22], backgroundColor: C.green, borderRadius: 4 },
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { display: false }, border: { display: false }, ticks: { color: '#c9cddb', font: { size: 14.5 } } },
+      y: { grid: { color: 'rgba(255,255,255,.08)' }, border: { display: false }, ticks: { color: '#c9cddb', font: { size: 13.5 } } }
+    }
+  }
+});
+
+/* ── Slide 2: SKY 3개년 ── */
+new Chart(document.getElementById('c3'), {
+  type: 'bar',
+  data: {
+    labels: ['서울대', '연세대', '고려대'],
+    datasets: [
+      { label: '2024', data: [1, 4, 3], backgroundColor: C.gray, borderRadius: 4 },
+      { label: '2025', data: [2, 5, 3], backgroundColor: C.blue, borderRadius: 4 },
+      { label: '2026', data: [1, 5, 4], backgroundColor: C.green, borderRadius: 4 },
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: true,
+        labels: { color: '#c9cddb', font: { size: 14.5 }, usePointStyle: true, pointStyleWidth: 11 }
+      }
+    },
+    scales: {
+      x: { grid: { display: false }, border: { display: false }, ticks: { color: '#f1efe8', font: { size: 16, weight: '700' } } },
+      y: { grid: { color: 'rgba(255,255,255,.08)' }, border: { display: false }, ticks: { color: '#c9cddb', stepSize: 1, font: {size: 13.5} } }
+    }
+  }
+});
+
+/* ── Slide 3: 의치한약 계열별 지원 분포 도넛 ── */
+new Chart(document.getElementById('c9'), {
+  type: 'doughnut',
+  data: {
+    labels: ['의학 13', '약학 8', '한의학 5', '치의학 2'],
+    datasets: [{
+      data: [13, 8, 5, 2],
+      backgroundColor: [C.red, C.blue, C.amber, C.purple],
+      borderWidth: 0,
+      hoverOffset: 8,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    cutout: '60%',
+    plugins: {
+      legend: {
+        display: true, position: 'bottom',
+        labels: { color: '#c9cddb', font: { size: 13.5 }, usePointStyle: true, padding: 14 }
+      },
+      tooltip: {
+        callbacks: { label: ctx => ' ' + ctx.label + '건' }
+      }
+    }
+  }
+});
+
+/* ── Slide 3: 의치한약 연도별 지원·합격 추이 ── */
+new Chart(document.getElementById('c10'), {
+  type: 'bar',
+  data: {
+    labels: ['2024', '2025', '2026'],
+    datasets: [
+      { label: '지원', data: [7, 16, 5], backgroundColor: 'rgba(96,165,250,.35)', borderColor: C.blue, borderWidth: 1, borderRadius: 4 },
+      { label: '합격', data: [2, 2, 1], backgroundColor: C.green, borderRadius: 4 },
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: true, labels: { color: '#c9cddb', font: { size: 13.5 }, usePointStyle: true } }
+    },
+    scales: {
+      x: { grid: { display: false }, border: { display: false }, ticks: { color: '#f1efe8', font: { size: 15, weight: '700' } } },
+      y: { grid: { color: 'rgba(255,255,255,.08)' }, border: { display: false }, ticks: { color: '#c9cddb', stepSize: 2, font: {size: 13} } }
+    }
+  }
+});
+
+/* ── Slide 4: TOP15 horizontal bar ── */
+new Chart(document.getElementById('c4'), {
+  type: 'bar',
+  data: {
+    labels: [
+      '안양대(안양)', '백석대(천안)', '국민대(서울)',
+      '강원대(춘천)', '연세대(서울)', '중앙대(서울)',
+      '서강대(서울)', '서울과기대(서울)', '인하대(인천)',
+      '세종대(서울)', '가천대(성남)', '경기대(수원)',
+      '성결대(안양)', '선문대(아산)', '고려대(서울)'
+    ],
+    datasets: [{
+      data: [10, 8, 6, 6, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 4],
+      backgroundColor: (ctx) => {
+        const sky = ['연세대(서울)', '고려대(서울)'];
+        return sky.includes(ctx.chart.data.labels[ctx.dataIndex]) ? C.green : C.blueDim.replace('.22', '.45');
+      },
+      borderColor: (ctx) => {
+        const sky = ['연세대(서울)', '고려대(서울)'];
+        return sky.includes(ctx.chart.data.labels[ctx.dataIndex]) ? C.green : C.blue;
+      },
+      borderWidth: 1,
+      borderRadius: 4,
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: 'rgba(255,255,255,.08)' }, border: { display: false }, ticks: { color: '#c9cddb', font: { size: 13.5 }, stepSize: 1 } },
+      y: { grid: { display: false }, border: { display: false }, ticks: { color: '#f1efe8', font: { size: 14.5 } } }
+    }
+  }
+});
+
+/* ── Slide 4: 논술 내신 분포(막대) ── */
+new Chart(document.getElementById('c5'), {
+  type: 'bar',
+  data: {
+    labels: ['아주대', '을지대', '수원대①', '서경대①', '신한대', '가천대', '서경대②', '수원대②', '을지대②', '경기대', '수원대③', '한신대'],
+    datasets: [{
+      label: '내신 등급',
+      data: [3.64, 3.96, 4.22, 4.22, 4.27, 4.28, 4.28, 4.94, 4.94, 5.11, 5.36, 6.76],
+      backgroundColor: [
+        C.green, C.green, C.blue, C.blue, C.blue, C.blue,
+        C.blue, C.amber, C.amber, C.amber, C.amber, C.red
+      ],
+      borderRadius: 4,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: { label: ctx => ' 내신 ' + ctx.raw + '등급' }
+      }
+    },
+    scales: {
+      x: { grid: { display: false }, border: { display: false }, ticks: { color: '#c9cddb', font: { size: 13 }, maxRotation: 35 } },
+      y: {
+        reverse: true, min: 0, max: 9,
+        grid: { color: 'rgba(255,255,255,.08)' }, border: { display: false },
+        ticks: { color: '#c9cddb', stepSize: 1, font: {size: 13.5}, callback: v => v + '등급' },
+        title: { display: true, text: '← 낮을수록 우수', color: '#8b93a3', font: { size: 13 } }
+      }
+    }
+  }
+});
+
+/* ── Slide 5: 내신 등급별 합격 ── */
+new Chart(document.getElementById('c6'), {
+  type: 'bar',
+  data: {
+    labels: ['1등급', '2등급', '3등급', '4등급', '5등급', '6등급', '7등급', '8-9등급'],
+    datasets: [{
+      label: '합격건수',
+      data: [34, 45, 50, 64, 82, 47, 13, 0],
+      backgroundColor: [
+        C.green, C.green, C.blue, C.blue, C.amber, C.amber, C.red, C.red
+      ],
+      borderRadius: 4,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { display: false }, border: { display: false }, ticks: { color: '#f1efe8', font: { size: 14.5 } } },
+      y: { grid: { color: 'rgba(255,255,255,.08)' }, border: { display: false }, ticks: { color: '#c9cddb', font: { size: 13.5 } } }
+    }
+  }
+});
+
+/* ── Slide 5: 전형 유형 도넛 ── */
+new Chart(document.getElementById('c7'), {
+  type: 'doughnut',
+  data: {
+    labels: ['교과전형 165', '종합전형 72', '전문대 98'],
+    datasets: [{
+      data: [165, 72, 98],
+      backgroundColor: [C.green, C.blue, C.amber],
+      borderWidth: 0,
+      hoverOffset: 8,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    cutout: '60%',
+    plugins: {
+      legend: {
+        display: true, position: 'bottom',
+        labels: { color: '#c9cddb', font: { size: 14.5 }, usePointStyle: true, padding: 18 }
+      }
+    }
+  }
+});
+
+/* ── Slide 6: 3개년 전형 비교 ── */
+new Chart(document.getElementById('c8'), {
+  type: 'bar',
+  data: {
+    labels: ['학생부', '논술', '기타'],
+    datasets: [
+      { label: '2024', data: [302, 8, 17], backgroundColor: C.gray, borderRadius: 4 },
+      { label: '2025', data: [465, 11, 19], backgroundColor: C.blue, borderRadius: 4 },
+      { label: '2026', data: [335, 12, 22], backgroundColor: C.green, borderRadius: 4 },
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: true,
+        labels: { color: '#c9cddb', font: { size: 14.5 }, usePointStyle: true }
+      }
+    },
+    scales: {
+      x: { grid: { display: false }, border: { display: false }, ticks: { color: '#f1efe8', font: { size: 16, weight: '700' } } },
+      y: { grid: { color: 'rgba(255,255,255,.08)' }, border: { display: false }, ticks: { color: '#c9cddb', font: {size:13.5} } }
+    }
+  }
+});
+
+goTo(1);
+</script>
+</body>
+</html>
